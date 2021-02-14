@@ -2,6 +2,7 @@ package letscode.sarafan.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
 import letscode.sarafan.domain.Message;
+import letscode.sarafan.domain.User;
 import letscode.sarafan.domain.Views;
 import letscode.sarafan.dto.EventType;
 import letscode.sarafan.dto.MetaDto;
@@ -14,6 +15,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -58,12 +60,13 @@ public class MessageController {
 
     @PostMapping
     public Message create(
-            @RequestBody Message message
+            @RequestBody Message message,
+            @AuthenticationPrincipal User user
     ) throws IOException {
         message.setCreationDate(LocalDateTime.now());
         Message updatedMessage = messageRepository.save(message);
         fillMeta(message);
-
+        message.setAuthor(user);
         wsSender.accept(EventType.CREATE, updatedMessage);
 
         return updatedMessage;
@@ -113,6 +116,7 @@ public class MessageController {
 
         }
     }
+
     private MetaDto getMeta(String url) throws IOException {
         Document doc = Jsoup.connect(url).get();
         Elements title = doc.select("meta[name$=title],meta[property$=title]");

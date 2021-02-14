@@ -1,6 +1,10 @@
 package letscode.sarafan.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import letscode.sarafan.domain.User;
+import letscode.sarafan.domain.Views;
 import letscode.sarafan.repository.MessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,21 +23,27 @@ public class MainController {
 
     @Value("${spring.profiles.active}")
     private String profile;
+    private final ObjectWriter writer;
 
     @Autowired
-    public MainController(MessageRepository messageRepository) {
+    public MainController(MessageRepository messageRepository, ObjectMapper mapper) {
         this.messageRepository = messageRepository;
+        writer = mapper
+                .setConfig(mapper.getSerializationConfig())
+                .writerWithView(Views.FullMessage.class);
     }
 
     @GetMapping
     public String main(
             Model model,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal User user) throws JsonProcessingException {
         HashMap<Object, Object> data = new HashMap<>();
 
         if (user != null) {
             data.put("profile", user);
-            data.put("messages", messageRepository.findAll());
+
+            String messages = writer.writeValueAsString(messageRepository.findAll());
+            model.addAttribute("messages", messages);
         }
 
         model.addAttribute("frontendData", data);
